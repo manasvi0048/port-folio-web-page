@@ -20,7 +20,16 @@
         <span class="video-glow video-glow-one"></span>
         <span class="video-glow video-glow-two"></span>
     </div>
-    <div class="video-status" id="video-status">Video: starting</div>
+    <button class="dont-click-button" id="dont-click-button" type="button">Don't Click</button>
+    <div class="surprise-popup" id="surprise-popup" aria-hidden="true">
+        <button class="popup-close" id="popup-close" type="button" aria-label="Close popup">x</button>
+        <p class="popup-label">Too Late</p>
+        <h3>You found the right website handler and developer at the right time.</h3>
+        <p>
+            Clean design, strong energy, and a builder who actually cares about the final result.
+            Since you clicked, we should probably create something unforgettable.
+        </p>
+    </div>
 
     <div class="page-shell">
         <header class="hero">
@@ -121,7 +130,7 @@
                     <p class="eyebrow">Contact</p>
                     <h2>Have a project in mind?</h2>
                     <p class="section-text">
-                        If you want a clean personal site, landing page, or design refresh, send a quick inquiry and I'll get back to you.
+                        If you want a clean personal site, landing page, or design refresh, send a quick inquiry and I'll get back to you within 24 hours.
                     </p>
                 </div>
 
@@ -138,6 +147,7 @@
 
                         <button class="button button-primary submit-button" type="submit">Send Inquiry</button>
                     </form>
+                    <p class="reply-note">Reply time: within 24 hours for all genuine inquiries.</p>
                     <p class="form-status" id="form-status" aria-live="polite"></p>
                 </div>
             </section>
@@ -237,7 +247,6 @@
 
         function setupBackgroundVideo() {
             const video = document.getElementById("background-video");
-            const status = document.getElementById("video-status");
             if (!video) {
                 return;
             }
@@ -246,42 +255,21 @@
             video.defaultMuted = true;
             video.load();
 
-            const updateStatus = (label) => {
-                const errorCode = video.error ? video.error.code : "none";
-                status.textContent = `${label} | ready=${video.readyState} network=${video.networkState} error=${errorCode}`;
-            };
-
-            updateStatus("Video: loading");
-
             const tryPlay = () => {
                 const playPromise = video.play();
                 if (playPromise && typeof playPromise.catch === "function") {
                     playPromise.catch(() => {
                         document.body.classList.add("video-fallback");
-                        updateStatus("Video: blocked");
                     });
                 }
             };
 
-            video.addEventListener("loadeddata", () => {
-                updateStatus("Video: loaded");
-            });
-
-            video.addEventListener("loadedmetadata", () => {
-                updateStatus("Video: metadata");
-            });
-
             video.addEventListener("canplay", tryPlay, { once: true });
-            video.addEventListener("canplay", () => {
-                updateStatus("Video: canplay");
-            });
             video.addEventListener("playing", () => {
                 document.body.classList.add("video-active");
-                updateStatus("Video: playing");
             });
             video.addEventListener("error", () => {
                 document.body.classList.add("video-fallback");
-                updateStatus("Video: failed");
             });
 
             tryPlay();
@@ -289,15 +277,31 @@
             setTimeout(() => {
                 if (!document.body.classList.contains("video-active")) {
                     document.body.classList.add("video-fallback");
-                    updateStatus("Video: timeout");
                 }
             }, 5000);
+        }
+
+        function setupSurprisePopup() {
+            const trigger = document.getElementById("dont-click-button");
+            const popup = document.getElementById("surprise-popup");
+            const closeButton = document.getElementById("popup-close");
+
+            trigger.addEventListener("click", () => {
+                popup.classList.add("visible");
+                popup.setAttribute("aria-hidden", "false");
+            });
+
+            closeButton.addEventListener("click", () => {
+                popup.classList.remove("visible");
+                popup.setAttribute("aria-hidden", "true");
+            });
         }
 
         window.onload = () => {
             loadProfile();
             setupInquiryForm();
             setupBackgroundVideo();
+            setupSurprisePopup();
         };
     </script>
 </body>

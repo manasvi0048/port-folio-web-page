@@ -104,20 +104,79 @@ body.video-active .background-video {
     filter: saturate(1.08) contrast(1.06) brightness(0.58);
 }
 
-.video-status {
+.dont-click-button {
     position: fixed;
     right: 16px;
     bottom: 16px;
     z-index: 3;
-    padding: 10px 14px;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 211, 74, 0.24);
     border-radius: 999px;
-    border: 1px solid rgba(255, 211, 74, 0.18);
-    background: rgba(12, 10, 8, 0.78);
+    background: linear-gradient(135deg, rgba(255, 211, 74, 0.96), rgba(255, 159, 28, 0.96));
+    color: #231506;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+    animation: float-button 3.2s ease-in-out infinite;
+}
+
+.surprise-popup {
+    position: fixed;
+    right: 16px;
+    bottom: 132px;
+    z-index: 4;
+    width: min(360px, calc(100vw - 32px));
+    padding: 22px 22px 20px;
+    border: 1px solid rgba(255, 211, 74, 0.2);
+    border-radius: 24px;
+    background: rgba(22, 16, 10, 0.94);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(14px);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(14px) scale(0.96);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.surprise-popup.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.popup-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 211, 74, 0.16);
+    border-radius: 50%;
+    background: rgba(255, 221, 115, 0.06);
     color: var(--accent-soft);
-    font-size: 0.85rem;
+    font: inherit;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    backdrop-filter: blur(10px);
+    cursor: pointer;
+}
+
+.popup-label {
+    margin-bottom: 10px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.surprise-popup h3 {
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+    line-height: 1.15;
+}
+
+.surprise-popup p {
+    color: var(--muted);
 }
 
 .hero,
@@ -558,6 +617,12 @@ h2 {
     cursor: pointer;
 }
 
+.reply-note {
+    color: var(--accent-soft);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
 .form-status {
     min-height: 24px;
     font-size: 0.95rem;
@@ -640,6 +705,16 @@ h2 {
     }
 }
 
+@keyframes float-button {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
 @media (max-width: 900px) {
     .hero-grid,
     .contact-section,
@@ -694,5 +769,15 @@ h2 {
 
     .background-video {
         object-position: center;
+    }
+
+    .dont-click-button {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .surprise-popup {
+        right: 12px;
+        bottom: 72px;
     }
 }

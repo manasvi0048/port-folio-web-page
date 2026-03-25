@@ -43,6 +43,10 @@ DESIGNER_PROFILE = {
 }
 
 
+class DuplicateInquiryError(Exception):
+    pass
+
+
 def load_psycopg():
     try:
         return importlib.import_module("psycopg")
@@ -94,6 +98,12 @@ def init_database():
                 )
                 """
             )
+            cursor.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS inquiries_email_unique_idx
+                ON inquiries (LOWER(email))
+                """
+            )
         connection.commit()
 
 
@@ -133,15 +143,30 @@ def get_readiness_snapshot():
 
 
 def save_inquiry(name, email, message):
+    normalized_email = email.strip().lower()
+
     with get_db_connection() as connection:
         with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id
+                FROM inquiries
+                WHERE LOWER(email) = %s
+                LIMIT 1
+                """,
+                (normalized_email,),
+            )
+            existing_inquiry = cursor.fetchone()
+            if existing_inquiry:
+                raise DuplicateInquiryError("This email has already submitted feedback.")
+
             cursor.execute(
                 """
                 INSERT INTO inquiries (name, email, message)
                 VALUES (%s, %s, %s)
                 RETURNING id
                 """,
-                (name, email, message),
+                (name, normalized_email, message),
             )
             inquiry_id = cursor.fetchone()[0]
         connection.commit()
@@ -258,6 +283,8 @@ def create_inquiry():
 
     try:
         inquiry_id = save_inquiry(name, email, message)
+    except DuplicateInquiryError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
     except Exception as exc:
         return (
             jsonify(
