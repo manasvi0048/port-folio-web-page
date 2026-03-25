@@ -1,16 +1,21 @@
 import importlib
-import json
+import mimetypes
 import os
-import re
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+
+from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
 
 BASE_DIR = Path(__file__).resolve().parent
-HOST = "127.0.0.1"
 PORT = int(os.getenv("PORT", "5000"))
+STREAMABLE_FILES = {
+    "zenitsu-background-web.mp4",
+    "zenitsu-background-safe.mp4",
+    "zenitsu-background.webm",
+}
+
+app = Flask(__name__, static_folder=None)
 
 DESIGNER_PROFILE = {
     "name": "Manasvi M",
@@ -127,224 +132,159 @@ def get_readiness_snapshot():
     return health
 
 
-class PortfolioHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        path = urlparse(self.path).path
+def save_inquiry(name, email, message):
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO inquiries (name, email, message)
+                VALUES (%s, %s, %s)
+                RETURNING id
+                """,
+                (name, email, message),
+            )
+            inquiry_id = cursor.fetchone()[0]
+        connection.commit()
 
-        if path in ("/", "/index.html"):
-            self.serve_file("index.html", "text/html; charset=utf-8")
-            return
+    return inquiry_id
 
-        if path == "/style.css":
-            self.serve_file("style.css", "text/css; charset=utf-8")
-            return
 
-        if path == "/zenitsu-background-web.mp4":
-            self.serve_file("zenitsu-background-web.mp4", "video/mp4")
-            return
+def build_file_response(filename):
+    file_path = BASE_DIR / filename
+    if not file_path.exists():
+        abort(404)
 
-        if path == "/zenitsu-background-safe.mp4":
-            self.serve_file("zenitsu-background-safe.mp4", "video/mp4")
-            return
+    content_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    file_size = file_path.stat().st_size
+    range_header = request.headers.get("Range")
 
-        if path == "/zenitsu-background.webm":
-            self.serve_file("zenitsu-background.webm", "video/webm")
-            return
-
-        if path == "/zenitsu-poster.jpg":
-            self.serve_file("zenitsu-poster.jpg", "image/jpeg")
-            return
-
-        if path == "/api/profile":
-            self.send_json(200, DESIGNER_PROFILE)
-            return
-
-        if path in ("/health", "/api/health"):
-            health = get_health_snapshot()
-            self.send_json(200, health)
-            return
-
-        if path in ("/ready", "/api/ready"):
-            readiness = get_readiness_snapshot()
-            status_code = 200 if readiness["ready"] else 503
-            self.send_json(status_code, readiness)
-            return
-
-        self.send_error(404, "File not found")
-
-    def do_HEAD(self):
-        path = urlparse(self.path).path
-
-        if path in ("/", "/index.html"):
-            self.serve_file("index.html", "text/html; charset=utf-8", send_body=False)
-            return
-
-        if path == "/style.css":
-            self.serve_file("style.css", "text/css; charset=utf-8", send_body=False)
-            return
-
-        if path == "/zenitsu-background-web.mp4":
-            self.serve_file("zenitsu-background-web.mp4", "video/mp4", send_body=False)
-            return
-
-        if path == "/zenitsu-background-safe.mp4":
-            self.serve_file("zenitsu-background-safe.mp4", "video/mp4", send_body=False)
-            return
-
-        if path == "/zenitsu-background.webm":
-            self.serve_file("zenitsu-background.webm", "video/webm", send_body=False)
-            return
-
-        if path == "/zenitsu-poster.jpg":
-            self.serve_file("zenitsu-poster.jpg", "image/jpeg", send_body=False)
-            return
-
-        if path == "/api/profile":
-            self.send_json(200, DESIGNER_PROFILE, send_body=False)
-            return
-
-        if path in ("/health", "/api/health"):
-            health = get_health_snapshot()
-            self.send_json(200, health, send_body=False)
-            return
-
-        if path in ("/ready", "/api/ready"):
-            readiness = get_readiness_snapshot()
-            status_code = 200 if readiness["ready"] else 503
-            self.send_json(status_code, readiness, send_body=False)
-            return
-
-        self.send_error(404, "File not found")
-
-    def do_POST(self):
-        path = urlparse(self.path).path
-
-        if path != "/api/inquiries":
-            self.send_error(404, "File not found")
-            return
-
+    if range_header:
         try:
-            payload = self.read_json_body()
-        except ValueError as exc:
-            self.send_json(400, {"ok": False, "error": str(exc)})
-            return
+            range_value = range_header.replace("bytes=", "", 1)
+            start_text, end_text = range_value.split("-", 1)
+            start = int(start_text)
+            end = int(end_text) if end_text else file_size - 1
+        except (ValueError, AttributeError):
+            return Response(status=416, headers={"Content-Range": f"bytes */{file_size}"})
 
-        name = payload.get("name", "").strip()
-        email = payload.get("email", "").strip()
-        message = payload.get("message", "").strip()
+        end = min(end, file_size - 1)
+        if start >= file_size or start > end:
+            return Response(status=416, headers={"Content-Range": f"bytes */{file_size}"})
 
-        if not name or not email or not message:
-            self.send_json(400, {"ok": False, "error": "Name, email, and message are required."})
-            return
+        length = end - start + 1
+        with file_path.open("rb") as file_handle:
+            file_handle.seek(start)
+            data = file_handle.read(length)
 
-        try:
-            inquiry_id = self.save_inquiry(name, email, message)
-        except Exception as exc:
-            self.send_json(
-                503,
+        response = Response(data, 206, mimetype=content_type, direct_passthrough=True)
+        response.headers["Accept-Ranges"] = "bytes"
+        response.headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+        response.headers["Content-Length"] = str(length)
+        return response
+
+    response = send_from_directory(BASE_DIR, filename, mimetype=content_type)
+    response.headers["Accept-Ranges"] = "bytes"
+    response.headers["Content-Length"] = str(file_size)
+    return response
+
+
+@app.get("/")
+@app.get("/index.html")
+def home():
+    return send_from_directory(BASE_DIR, "index.html")
+
+
+@app.get("/style.css")
+def styles():
+    return send_from_directory(BASE_DIR, "style.css", mimetype="text/css")
+
+
+@app.get("/server.js")
+def server_js():
+    return send_from_directory(BASE_DIR, "server.js", mimetype="application/javascript")
+
+
+@app.get("/zenitsu-poster.jpg")
+def zenitsu_poster():
+    return send_from_directory(BASE_DIR, "zenitsu-poster.jpg", mimetype="image/jpeg")
+
+
+@app.get("/zenitsu-background-web.mp4")
+def zenitsu_background_web():
+    return build_file_response("zenitsu-background-web.mp4")
+
+
+@app.get("/zenitsu-background-safe.mp4")
+def zenitsu_background_safe():
+    return build_file_response("zenitsu-background-safe.mp4")
+
+
+@app.get("/zenitsu-background.webm")
+def zenitsu_background_webm():
+    return build_file_response("zenitsu-background.webm")
+
+
+@app.get("/api/profile")
+def profile():
+    return jsonify(DESIGNER_PROFILE)
+
+
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    return jsonify(get_health_snapshot())
+
+
+@app.get("/ready")
+@app.get("/api/ready")
+def ready():
+    readiness = get_readiness_snapshot()
+    status_code = 200 if readiness["ready"] else 503
+    return jsonify(readiness), status_code
+
+
+@app.post("/api/inquiries")
+def create_inquiry():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({"ok": False, "error": "Request body must be valid JSON."}), 400
+
+    name = str(payload.get("name", "")).strip()
+    email = str(payload.get("email", "")).strip()
+    message = str(payload.get("message", "")).strip()
+
+    if not name or not email or not message:
+        return jsonify({"ok": False, "error": "Name, email, and message are required."}), 400
+
+    try:
+        inquiry_id = save_inquiry(name, email, message)
+    except Exception as exc:
+        return (
+            jsonify(
                 {
                     "ok": False,
                     "error": "Unable to save inquiry. Check PostgreSQL configuration.",
                     "details": str(exc),
                     "hint": "Install psycopg and set DATABASE_URL before submitting inquiries.",
-                },
-            )
-            return
-
-        self.send_json(
-            201,
-            {
-                "ok": True,
-                "message": "Inquiry submitted successfully.",
-                "id": inquiry_id,
-            },
+                }
+            ),
+            503,
         )
 
-    def log_message(self, format, *args):
-        return
+    return jsonify({"ok": True, "message": "Inquiry submitted successfully.", "id": inquiry_id}), 201
 
-    def read_json_body(self):
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
 
-        if not raw_body:
-            raise ValueError("Request body is empty.")
+@app.get("/<path:filename>")
+def static_files(filename):
+    safe_name = Path(filename).name
+    file_path = BASE_DIR / safe_name
+    if not file_path.exists():
+        abort(404)
 
-        try:
-            return json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError as exc:
-            raise ValueError("Request body must be valid JSON.") from exc
+    if safe_name in STREAMABLE_FILES:
+        return build_file_response(safe_name)
 
-    def save_inquiry(self, name, email, message):
-        with get_db_connection() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO inquiries (name, email, message)
-                    VALUES (%s, %s, %s)
-                    RETURNING id
-                    """,
-                    (name, email, message),
-                )
-                inquiry_id = cursor.fetchone()[0]
-            connection.commit()
-
-        return inquiry_id
-
-    def serve_file(self, filename, content_type, send_body=True):
-        file_path = BASE_DIR / filename
-        if not file_path.exists():
-            self.send_error(404, "File not found")
-            return
-
-        file_size = file_path.stat().st_size
-        range_header = self.headers.get("Range")
-
-        if range_header:
-            match = re.match(r"bytes=(\d+)-(\d*)", range_header)
-            if match:
-                start = int(match.group(1))
-                end = int(match.group(2)) if match.group(2) else file_size - 1
-                end = min(end, file_size - 1)
-
-                if start >= file_size or start > end:
-                    self.send_response(416)
-                    self.send_header("Content-Range", f"bytes */{file_size}")
-                    self.end_headers()
-                    return
-
-                chunk_size = end - start + 1
-                self.send_response(206)
-                self.send_header("Content-Type", content_type)
-                self.send_header("Accept-Ranges", "bytes")
-                self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
-                self.send_header("Content-Length", str(chunk_size))
-                self.end_headers()
-
-                if send_body:
-                    with file_path.open("rb") as file_handle:
-                        file_handle.seek(start)
-                        self.wfile.write(file_handle.read(chunk_size))
-                return
-
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Accept-Ranges", "bytes")
-        self.send_header("Content-Length", str(file_size))
-        self.end_headers()
-
-        if send_body:
-            with file_path.open("rb") as file_handle:
-                self.wfile.write(file_handle.read())
-
-    def send_json(self, status_code, payload, send_body=True):
-        content = json.dumps(payload).encode("utf-8")
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        if send_body:
-            self.wfile.write(content)
+    return send_from_directory(BASE_DIR, safe_name)
 
 
 if __name__ == "__main__":
@@ -354,6 +294,4 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"Database setup skipped: {exc}")
 
-    server = HTTPServer((HOST, PORT), PortfolioHandler)
-    print(f"Portfolio server running at http://{HOST}:{PORT}")
-    server.serve_forever()
+    app.run(host="127.0.0.1", port=PORT, debug=True)
