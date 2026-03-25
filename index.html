@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manasvi | Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-motion" aria-hidden="true">
+        <video class="background-video" id="background-video" autoplay muted loop playsinline preload="metadata" poster="zenitsu-poster.jpg" crossorigin="anonymous">
+            <source src="zenitsu-background.webm" type="video/webm">
+            <source src="zenitsu-background-safe.mp4" type="video/mp4">
+            <source src="zenitsu-background-web.mp4" type="video/mp4">
+        </video>
+        <span class="video-overlay"></span>
+        <span class="video-glow video-glow-one"></span>
+        <span class="video-glow video-glow-two"></span>
+    </div>
+    <div class="video-status" id="video-status">Video: starting</div>
+
+    <div class="page-shell">
+        <header class="hero">
+            <nav class="topbar">
+                <p class="brand">Manasvi M</p>
+                <a class="nav-link" href="#contact">Let's Talk</a>
+            </nav>
+
+            <div class="hero-grid">
+                <section class="hero-copy">
+                    <p class="eyebrow">Thunder Inspired Portfolio</p>
+                    <h1>Fast, bright, electric digital experiences.</h1>
+                    <p class="hero-text">
+                        I'm Manasvi, a creative developer focused on high-energy visuals, sharp layouts,
+                        and portfolio websites that feel striking from the very first screen.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a class="button button-primary" href="#projects">View Projects</a>
+                        <a class="button button-secondary" href="#contact">Send Inquiry</a>
+                    </div>
+
+                    <div class="stats">
+                        <article>
+                            <strong>4+</strong>
+                            <span>Core skills</span>
+                        </article>
+                        <article>
+                            <strong>3</strong>
+                            <span>Featured ideas</span>
+                        </article>
+                        <article>
+                            <strong>Flash</strong>
+                            <span>Lightning motion</span>
+                        </article>
+                    </div>
+                </section>
+
+                <aside class="hero-card">
+                    <div class="orb orb-one"></div>
+                    <div class="orb orb-two"></div>
+                    <p class="card-label">Quick Intro</p>
+                    <h2>Creative Developer with thunder-speed styling</h2>
+                    <p>
+                        I design and build portfolio sites, landing pages, and personal brands that feel
+                        bold, energetic, and charged with motion.
+                    </p>
+
+                    <div class="mini-dashboard">
+                        <div class="mini-panel mini-panel-large">
+                            <span>Visual Direction</span>
+                            <strong>Thunder pulse</strong>
+                        </div>
+                        <div class="mini-panel">
+                            <span>Motion</span>
+                            <strong>Electric</strong>
+                        </div>
+                        <div class="mini-panel">
+                            <span>Focus</span>
+                            <strong>Impact</strong>
+                        </div>
+                    </div>
+
+                    <div class="skill-list" id="skills"></div>
+                </aside>
+            </div>
+        </header>
+
+        <main>
+            <section class="section" id="about">
+                <div class="section-heading">
+                    <p class="eyebrow">About Me</p>
+                    <h2>Bright visuals with sharp energy and clean structure.</h2>
+                </div>
+                <div class="about-grid">
+                    <p class="section-text" id="bio"></p>
+                    <div class="about-art">
+                        <div class="art-card">
+                            <span class="art-line art-line-short"></span>
+                            <span class="art-line"></span>
+                            <span class="art-line art-line-soft"></span>
+                        </div>
+                        <div class="art-circle"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="projects">
+                <div class="section-heading">
+                    <p class="eyebrow">Featured Work</p>
+                    <h2>Projects built with speed, contrast, and personality.</h2>
+                </div>
+                <div class="projects-grid" id="projects-grid"></div>
+            </section>
+
+            <section class="section contact-section" id="contact">
+                <div>
+                    <p class="eyebrow">Contact</p>
+                    <h2>Have a project in mind?</h2>
+                    <p class="section-text">
+                        If you want a clean personal site, landing page, or design refresh, send a quick inquiry and I'll get back to you.
+                    </p>
+                </div>
+
+                <div class="contact-card">
+                    <form class="inquiry-form" id="inquiry-form">
+                        <label for="name">Name</label>
+                        <input id="name" name="name" type="text" placeholder="Your name" required>
+
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" placeholder="your@email.com" required>
+
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" placeholder="Tell me about your project" required></textarea>
+
+                        <button class="button button-primary submit-button" type="submit">Send Inquiry</button>
+                    </form>
+                    <p class="form-status" id="form-status" aria-live="polite"></p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const data = {
+            bio: "I create portfolio websites and visual experiences that balance clarity, personality, and modern styling. My focus is simple design, smooth structure, and helping ideas feel presentation-ready from day one.",
+            expertise: ["HTML5", "CSS3", "JavaScript", "UI Design"],
+            works: [
+                {
+                    title: "Portfolio Website",
+                    category: "Personal Branding",
+                    description: "A clean one-page website designed to introduce a creator, highlight skills, and drive inquiries."
+                },
+                {
+                    title: "Startup Landing Page",
+                    category: "Web Design",
+                    description: "A bold launch page concept built to explain a product quickly and create a strong visual identity."
+                },
+                {
+                    title: "Design Concept",
+                    category: "Creative Direction",
+                    description: "An interface exploration focused on layout, hierarchy, and a memorable first-screen experience."
+                }
+            ]
+        };
+
+        function loadProfile() {
+            document.getElementById("bio").innerText = data.bio;
+
+            const skillsDiv = document.getElementById("skills");
+            skillsDiv.innerHTML = "";
+            data.expertise.forEach((skill) => {
+                skillsDiv.innerHTML += `<span class="skill-tag">${skill}</span>`;
+            });
+
+            const grid = document.getElementById("projects-grid");
+            grid.innerHTML = "";
+            data.works.forEach((work) => {
+                grid.innerHTML += `
+                    <article class="project-card">
+                        <div class="project-graphic">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <p class="project-category">${work.category}</p>
+                        <h3>${work.title}</h3>
+                        <p>${work.description}</p>
+                    </article>
+                `;
+            });
+        }
+
+        function setupInquiryForm() {
+            const form = document.getElementById("inquiry-form");
+            const status = document.getElementById("form-status");
+
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                status.textContent = "Sending your inquiry...";
+                status.className = "form-status";
+
+                const formData = new FormData(form);
+                const payload = {
+                    name: formData.get("name"),
+                    email: formData.get("email"),
+                    message: formData.get("message")
+                };
+
+                try {
+                    const response = await fetch("/api/inquiries", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || "Unable to send inquiry right now.");
+                    }
+
+                    form.reset();
+                    status.textContent = "Inquiry sent successfully.";
+                    status.className = "form-status success";
+                } catch (error) {
+                    status.textContent = error.message;
+                    status.className = "form-status error";
+                }
+            });
+        }
+
+        function setupBackgroundVideo() {
+            const video = document.getElementById("background-video");
+            const status = document.getElementById("video-status");
+            if (!video) {
+                return;
+            }
+
+            video.muted = true;
+            video.defaultMuted = true;
+            video.load();
+
+            const updateStatus = (label) => {
+                const errorCode = video.error ? video.error.code : "none";
+                status.textContent = `${label} | ready=${video.readyState} network=${video.networkState} error=${errorCode}`;
+            };
+
+            updateStatus("Video: loading");
+
+            const tryPlay = () => {
+                const playPromise = video.play();
+                if (playPromise && typeof playPromise.catch === "function") {
+                    playPromise.catch(() => {
+                        document.body.classList.add("video-fallback");
+                        updateStatus("Video: blocked");
+                    });
+                }
+            };
+
+            video.addEventListener("loadeddata", () => {
+                updateStatus("Video: loaded");
+            });
+
+            video.addEventListener("loadedmetadata", () => {
+                updateStatus("Video: metadata");
+            });
+
+            video.addEventListener("canplay", tryPlay, { once: true });
+            video.addEventListener("canplay", () => {
+                updateStatus("Video: canplay");
+            });
+            video.addEventListener("playing", () => {
+                document.body.classList.add("video-active");
+                updateStatus("Video: playing");
+            });
+            video.addEventListener("error", () => {
+                document.body.classList.add("video-fallback");
+                updateStatus("Video: failed");
+            });
+
+            tryPlay();
+
+            setTimeout(() => {
+                if (!document.body.classList.contains("video-active")) {
+                    document.body.classList.add("video-fallback");
+                    updateStatus("Video: timeout");
+                }
+            }, 5000);
+        }
+
+        window.onload = () => {
+            loadProfile();
+            setupInquiryForm();
+            setupBackgroundVideo();
+        };
+    </script>
+</body>
+</html>
